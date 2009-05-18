@@ -2,7 +2,6 @@ package ZConf::GUI;
 
 use warnings;
 use strict;
-use ZConf;
 use Module::List qw(list_modules);
 
 =head1 NAME
@@ -11,7 +10,7 @@ ZConf::GUI - A GUI backend chooser.
 
 =head1 VERSION
 
-Version 0.0.0
+Version 0.1.0
 
 =cut
 
@@ -80,6 +79,7 @@ sub new {
 	}
 
 	if (!defined($args{zconf})) {
+		use ZConf;
 		$self->{zconf}=ZConf->new();
 		if(defined($self->{zconf}->{error})){
 			warn("ZConf-GUI new:1: Could not initiate ZConf. It failed with '"
@@ -197,8 +197,12 @@ sub getPreferred{
 		return undef;
 	}
 
+	#the change it for fetching the info
+	my $module2=$module;
+	$module2=~s/\:\:/\//g;
+
 	#fetch the preferences for the module
-	my %vars=$self->{zconf}->regexVarGet('gui', '^modules/'.quotemeta($module).'$');
+	my %vars=$self->{zconf}->regexVarGet('gui', '^modules/'.quotemeta($module2).'$');
 	if($self->{zconf}->{error}){
 		warn('ZConf-GUI getPreferred:1: regexVarGet errored '.
 			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
@@ -211,7 +215,7 @@ sub getPreferred{
 	}
 
 	#if we don't get it, try the default
-	if (!defined($vars{'modules/'.$module})) {
+	if (!defined($vars{'modules/'.$module2})) {
 		%vars=$self->{zconf}->regexVarGet('gui', '^default$');
 		if($self->{zconf}->{error}){
 			warn('ZConf-GUI getPreferred:1: regexVarGet errored '.
@@ -235,7 +239,7 @@ sub getPreferred{
 		return split(/:/, $vars{default});
 	}
 
-	return split(/:/, $vars{'modules/'.$module});
+	return split(/:/, $vars{'modules/'.$module2});
 }
 
 =head2 getSet
@@ -268,6 +272,55 @@ sub getSet{
 	}
 
 	return $set;
+}
+
+=head2 getUseX
+
+This fetches if X should be used or not for a module.
+
+    $zcgui->getUseX('ZConf::Runner');
+    if($zcgui->{error}){
+        print "Error!";
+    }
+
+=cut
+
+sub getUseX{
+	my $self=$_[0];
+	my $module=$_[1];
+
+	$self->errorblank;
+
+	if (!defined($module)) {
+		warn('ZConf-GUI getUseX:2: No module specified');
+		$self->{error}=2;
+		$self->{errorString}='No module specified';
+		return undef;
+	}
+
+	#the change it for fetching the info
+	my $module2=$module;
+	$module2=~s/\:\:/\//g;
+
+	#fetch the preferences for the module
+	my %vars=$self->{zconf}->regexVarGet('gui', '^useX/'.quotemeta($module2).'$');
+	if($self->{zconf}->{error}){
+		warn('ZConf-GUI getUseX:1: regexVarGet errored '.
+			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
+			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
+		$self->{error}=1;
+		$self->{errorString}='ZConf error listing sets for the config "gui".'.
+			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
+			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		return undef;
+	}
+
+	#if we don't get it, try the default
+	if (!defined($vars{'modules/'.$module2})) {
+		return 1;
+	}
+
+	return $vars{'modules/'.$module2};
 }
 
 =head2 hasPreferred
@@ -668,6 +721,58 @@ sub setPreferred{
 	return 1;
 }
 
+=head2 setUseX
+
+This determines if X should be used or not. This only affects terminal
+related modules that respect this.
+
+    $zcgui->setUseX('ZConf::Runner', '1');
+    if($zcgui->{error}){
+        print "Error!";
+    }
+
+=cut
+
+sub setUseX{
+	my $self=$_[0];
+	my $module=$_[1];
+	my $useX=$_[2];
+
+	$self->errorblank;
+
+	if (!defined($module)) {
+		warn('ZConf-GUI setUseX:2: No module specified');
+		$self->{error}=2;
+		$self->{errorString}='No module specified';
+		return undef;
+	}
+
+	if (!defined($useX)) {
+		warn('ZConf-GUI setUseX:3: No prefs specified');
+		$self->{error}=3;
+		$self->{errorString}='No prefs specified';
+		return undef;
+	}
+
+	$module=~s/::/\//g;
+
+	$self->{zconf}->setVar('gui', 'useX/'.$module, $useX);
+	if($self->{zconf}->{error}){
+		warn('ZConf-GUI setUseX:1: setvar errored '.
+			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
+			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
+		$self->{error}=1;
+		$self->{errorString}='ZConf error listing sets for the config "gui".'.
+			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
+			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		return undef;
+	}
+
+	$self->{zconf}->writeSetFromLoadedConfig({config=>'gui'});
+
+	return 1;
+}
+
 =head2 termAvailable
 
 This checks to see if a terminal is available. It checks
@@ -727,6 +832,43 @@ sub Xavailable{
 	}
 
 	return 1;
+}
+
+=head2 useX
+
+This checks to see if a terminal interface should try to use X or not by
+trying to spawn a X terminal.
+
+This calls getUseX and if it is true, it calls Xavailable and returns it's
+value.
+
+    my $useX=$zcgui->useX('ZConf::Runner');
+
+=cut
+
+sub useX{
+	my $self=$_[0];
+	my $module=$_[1];
+
+	$self->errorblank;
+
+	if (!defined($module)) {
+		my $error='No module specified.';
+		$self->{error}=2;
+		$self->{errorString}=$error;
+		warn('ZConf-GUI useX:2: '.$error);
+		return undef;
+	}
+
+	#get if X should be used
+	my $useX=$self->getUseX($module);
+
+	#if it should be used, make sure it is available
+	if ($useX) {
+		return $self->Xavailable;
+	}
+
+	return 0;
 }
 
 =head2 which
@@ -808,27 +950,27 @@ sub errorblank{
 
 ZConf error. Check $self->{zconf}->{error}.
 
-=head2 2
+=head3 2
 
 No module specified.
 
-=head2 3
+=head3 3
 
 No preferences specified.
 
-=head2 4
+=head3 4
 
 A preference matched /:/.
 
-=head2 5
+=head3 5
 
 No preferences for the listed module.
 
-=head2 6
+=head3 6
 
 'list_modules' failed.
 
-=head2 7
+=head3 7
 
 The specified module does not exist.
 
@@ -846,13 +988,26 @@ This is the default to use if nothing is setup for a module. The default value i
 
 =head2 modules/*
 
-This contains the a list of preferences for a module. The module name is converted
-to a ZConf variable name by replacing '::' with '/'.
+This contains the a list of preferences for a module.
+
+The module name is converted to a ZConf variable name by replacing '::' with '/'.
+
+=head2 useX/*
+
+This is if a cuses module should use X or not. If it is true, it will pass 
+
+If if is not defined, it is set to true.
+
+The module name is converted to a ZConf variable name by replacing '::' with '/'.
 
 =head1 USING ZConf::GUI
 
 A backend is considered to be any thing directly under <module>::GUI. How to call it
 or etc is directly up to the calling module though.
+
+Any module using this, should have it's widgets and dialogs use a single hash for all it's
+arguements. This is currently not a requirement, but will be in future versions for future
+automated calling.
 
 =head1 AUTHOR
 

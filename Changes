@@ -1,5 +1,12 @@
 Revision history for ZConf-GUI
 
+0.1.0	2009-05-18/13:00
+		-Fixed 'getPreferred'.
+		-Implement useX.
+		-Add 'bin/zcgui-gux'.
+		-Add 'bin/zcgui-sux'.
+		-Add the pod for 'bin/zcgui-set'.
+
 0.0.0	2009-05-13/07:00
 		-Initial release.
 		

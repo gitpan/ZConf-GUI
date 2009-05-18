@@ -33,52 +33,41 @@ $Getopt::Std::STANDARD_HELP_VERSION = 1;
 
 #version function
 sub main::VERSION_MESSAGE {
-	print "zcgui-set 0.0.0\n";
+	print "zcgui-lm 0.0.0\n";
 }
 
 #print help
 sub main::HELP_MESSAGE {
 	print "\n".
 	      "-s <set>  The ZConf set to us.e\n".
-	      "-m <module>  The module to set the prefernces for.\n".
-	      "-p <prefence string>  The preferences.\n";
+		  "-m <module>  The module to act upon.\n".
+		  "-u <boolean>  Use X or not.\m";
 }
 
 #gets the options
 my %opts=();
-getopts('s:m:p:', \%opts);
-
-if (!defined($opts{m})) {
-	warn('zcgui-set: No module specified via -m');
-	exit 254;
-}
-
-if (!defined($opts{p})) {
-	warn('zcgui-set: No preferences specified via -p');
-	exit 254;
-}
+getopts('s:m:u:', \%opts);
 
 my $zg=ZConf::GUI->new({set=>$opts{s}});
 if ($zg->{error}) {
 	exit $zg->{error};
 }
 
-my @prefs=split(/:/, $opts{p});
-
-$zg->setPreferred($opts{m}, \@prefs);
+$zg->setUseX($opts{m}, $opts{u});
 if ($zg->{error}) {
 	exit $zg->{error};
 }
 
 =head1 NAME
 
-zcgui-set - Set the preferred backends for a module.
+zcgui-sux - Set the useX value for a module.
 
 =head1 SYNOPSIS
 
-zcgui-get [B<-s>] B<-m> <module> B<-p> <preferred>
+zcgui-get [B<-s>] B<-m> <module> B<-u> <boolean>
 
-This provides a basic wrapper for setPreferred.
+This provides a basic wrapper for setUseX. It will print out
+the preferred one per line in order of preferences.
 
 =head1 SWTICHES
 
@@ -88,13 +77,11 @@ This shows the sets for a specified configuration.
 
 =head2 -m
 
-This is the module to get the prefernces for.
+This is the module to set the prefernces for.
 
-=head2 -p
+=head2 -u
 
-This is the preferred module string. It should be a list of the
-preferred backends, from favorite to least favorite, seperated
-by a ':'.
+The useX boolean value.
 
 =head1 AUTHOR
 
@@ -138,6 +125,6 @@ any
 
 =head1 README
 
-zcgui-set - Set the preferred backends for a module.
+zcgui-sux - Set the useX value for a module.
 
 =cut

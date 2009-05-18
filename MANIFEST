@@ -11,3 +11,5 @@ bin/zcgui-lm
 bin/zcgui-la
 bin/zcgui-get
 bin/zcgui-which
+bin/zcgui-gux
+bin/zcgui-sux
