@@ -1,5 +1,12 @@
 Revision history for ZConf-GUI
 
+1.0.0	2009-10-11/2:30
+		Aadd support for "appendOthers".
+		-"which" now behaves as documented instead of returning a list
+			of available modules.
+		-Clean up error reporting.
+		-No longer requires "Gtk2" as a prerequisite... was never used.
+
 0.1.0	2009-05-18/13:00
 		-Fixed 'getPreferred'.
 		-Implement useX.
