@@ -10,11 +10,11 @@ ZConf::GUI - A GUI backend chooser.
 
 =head1 VERSION
 
-Version 1.0.0
+Version 1.0.1
 
 =cut
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.1';
 
 =head1 SYNOPSIS
 
@@ -31,7 +31,7 @@ This initiates it.
 
 =head3 hash args
 
-=head2 autoinit
+=head4 autoinit
 
 If this is set to true, it will automatically call
 init the set and config. If this is set to false or
@@ -1165,6 +1165,25 @@ or etc is directly up to the calling module though.
 Any module using this, should have it's widgets and dialogs use a single hash for all it's
 arguements. This is currently not a requirement, but will be in future versions for future
 automated calling.
+
+=head2 suggested methods
+
+=head3 app
+
+This initiates a application. If it is called, it is not expected to return.
+
+=head3 hasApp
+
+This quaries a module to check to see if it has a app.
+
+=head3 dialogs
+
+This returns a array of dialogs that can be called. These interupt execution till returned.
+
+=head3 windows
+
+This is a list of windows that can be created. These should return immediately after creating
+the window.
 
 =head1 AUTHOR
 

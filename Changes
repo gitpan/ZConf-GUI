@@ -1,6 +1,10 @@
 Revision history for ZConf-GUI
 
-1.0.0	2009-10-11/2:30
+1.0.1	2009-10-23/02:30
+		-Update the pod on what should be implemented and etc.
+		-Pod cleanup.
+
+1.0.0	2009-10-11/02:30
 		Aadd support for "appendOthers".
 		-"which" now behaves as documented instead of returning a list
 			of available modules.
