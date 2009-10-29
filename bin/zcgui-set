@@ -33,15 +33,13 @@ $Getopt::Std::STANDARD_HELP_VERSION = 1;
 
 #version function
 sub main::VERSION_MESSAGE {
-	print "zcgui-set 0.0.0\n";
+	print "zcgui-set 0.0.1\n";
 }
 
 #print help
 sub main::HELP_MESSAGE {
 	print "\n".
-	      "-s <set>  The ZConf set to us.e\n".
-	      "-m <module>  The module to set the prefernces for.\n".
-	      "-p <prefence string>  The preferences.\n";
+	      "Please see perldoc zcgui-set\n";
 }
 
 #gets the options
@@ -62,6 +60,8 @@ my $zg=ZConf::GUI->new({set=>$opts{s}});
 if ($zg->{error}) {
 	exit $zg->{error};
 }
+
+$zg->readSet($opts{s});
 
 my @prefs=split(/:/, $opts{p});
 

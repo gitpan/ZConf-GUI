@@ -33,14 +33,13 @@ $Getopt::Std::STANDARD_HELP_VERSION = 1;
 
 #version function
 sub main::VERSION_MESSAGE {
-	print "zcgui-lm 0.0.0\n";
+	print "zcgui-gux 0.0.1\n";
 }
 
 #print help
 sub main::HELP_MESSAGE {
 	print "\n".
-	      "-s <set>  The ZConf set to us.e\n".
-		  "-m <module>  The module to act on.";
+	      "Please see perldoc zcgui-gux\n";
 }
 
 #gets the options
@@ -51,6 +50,8 @@ my $zg=ZConf::GUI->new({set=>$opts{s}});
 if ($zg->{error}) {
 	exit $zg->{error};
 }
+
+$zg->readSet($opts{s});
 
 my $useX=$zg->getUseX($opts{m});
 if ($zg->{error}) {

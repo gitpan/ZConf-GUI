@@ -1,5 +1,13 @@
 Revision history for ZConf-GUI
 
+1.0.2	2009-10-29/02:30
+		-If the new method errors, it is permanent.
+		-Clean up the error warning code.
+		-Correct method used in which.
+		-Remove the autoinit function from the new method. It now always will.
+		-Sets now have to be set after initilization via new.
+		-Correct the help info in the scripts.
+
 1.0.1	2009-10-23/02:30
 		-Update the pod on what should be implemented and etc.
 		-Pod cleanup.
