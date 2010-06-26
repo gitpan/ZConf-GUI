@@ -1,5 +1,8 @@
 Revision history for ZConf-GUI
 
+1.0.3	2010-06-26/03:10
+		-Fix modules dependencies.
+
 1.0.2	2009-10-29/02:30
 		-If the new method errors, it is permanent.
 		-Clean up the error warning code.
