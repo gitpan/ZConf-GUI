@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#Copyright (c) 2009, Zane C. Bowers
+#Copyright (c) 2012, Zane C. Bowers-Hadley
 #All rights reserved.
 #
 #Redistribution and use in source and binary forms, with or without modification,
@@ -33,7 +33,7 @@ $Getopt::Std::STANDARD_HELP_VERSION = 1;
 
 #version function
 sub main::VERSION_MESSAGE {
-	print "zcgui-set 0.0.1\n";
+	print "zcgui-set 0.1.0\n";
 }
 
 #print help
@@ -57,8 +57,8 @@ if (!defined($opts{p})) {
 }
 
 my $zg=ZConf::GUI->new({set=>$opts{s}});
-if ($zg->{error}) {
-	exit $zg->{error};
+if ($zg->error) {
+	exit $zg->error;
 }
 
 $zg->readSet($opts{s});
@@ -66,8 +66,8 @@ $zg->readSet($opts{s});
 my @prefs=split(/:/, $opts{p});
 
 $zg->setPreferred($opts{m}, \@prefs);
-if ($zg->{error}) {
-	exit $zg->{error};
+if ($zg->error) {
+	exit $zg->error;
 }
 
 =head1 NAME
@@ -98,7 +98,7 @@ by a ':'.
 
 =head1 AUTHOR
 
-Copyright (c) 2009, Zame C. Bowers <vvelox@vvelox.net>
+Copyright (c) 2012, Zame C. Bowers-Hadley <vvelox@vvelox.net>
 
 All rights reserved.
 
@@ -121,12 +121,6 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-=head1 Changelog
-
-=head2 0.0.0
-
-Initial version.
 
 =head1 SCRIPT CATEGORIES
 

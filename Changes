@@ -1,5 +1,8 @@
 Revision history for ZConf-GUI
 
+1.1.0	 2012-07-23/00:00
+		 -Now uses Error::Helper.
+
 1.0.3	2010-06-26/03:10
 		-Fix modules dependencies.
 

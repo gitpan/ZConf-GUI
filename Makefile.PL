@@ -10,10 +10,10 @@ WriteMakefile(
     PL_FILES            => {},
     INST_SCRIPT => 'bin',
     PREREQ_PM => {
-				  'Test::More'=>0,
-				  'ZConf'=>0,
-				  'Module::List'=>0,
+		'Test::More'=>0,
+		'ZConf'=>0,
+		'Module::List'=>0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'ZConf-GUI-*' },
-);
+	);

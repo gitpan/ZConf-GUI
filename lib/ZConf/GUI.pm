@@ -4,6 +4,7 @@ use warnings;
 use strict;
 use Module::List qw(list_modules);
 use ZConf;
+use base 'Error::Helper';
 
 =head1 NAME
 
@@ -11,11 +12,11 @@ ZConf::GUI - A GUI backend chooser.
 
 =head1 VERSION
 
-Version 1.0.3
+Version 1.1.0
 
 =cut
 
-our $VERSION = '1.0.3';
+our $VERSION = '1.1.0';
 
 =head1 SYNOPSIS
 
@@ -52,9 +53,25 @@ sub new {
 	if(defined($_[1])){
 		%args= %{$_[1]};
 	}
-	my $function='new';
 
-	my $self={error=>undef, errorString=>undef, module=>'ZConf-GUI', autoinit=>1, perror=>undef};
+	my $self={
+		error=>undef,
+		errorString=>undef,
+		perror=>undef,
+		errorExtra=>{
+			flags=>{
+				1=>'zconf',
+				2=>'missingArg',
+				3=>'missingArg',
+				4=>'colon',
+				5=>'noPrefs',
+				6=>'lmFailed',
+				7=>'modDNE',
+				8=>'missingArg',
+				9=>'notBoolean',
+			}
+		},
+	};
 	bless $self;
 
 	#this sets the set to undef if it is not defined
@@ -67,13 +84,13 @@ sub new {
 	if (!defined($args{zconf})) {
 		use ZConf;
 		$self->{zconf}=ZConf->new();
-		if(defined($self->{zconf}->{error})){
+		if(defined($self->{zconf}->error)){
 			$self->{perror}=1;
 			$self->{error}=1;
 			$self->{errorString}="Could not initiate ZConf. It failed with '"
-			                     .$self->{zconf}->{error}."', '".
-			                     $self->{zconf}->{errorString}."'";
-			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                     .$self->{zconf}->error."', '".
+			                     $self->{zconf}->errorString."'";
+			$self->warn;
 			return $self;
 		}
 	}else {
@@ -83,36 +100,36 @@ sub new {
 	#create the config if it does not exist
 	#if it does exist, make sure the set we are using exists
     $self->{init} = $self->{zconf}->configExists("gui");
-	if($self->{zconf}->{error}){
+	if( $self->{zconf}->error ){
 		$self->{perror}=1;
 		$self->{error}=1;
 		$self->{errorString}="Could not check if the config 'gu'i exists.".
-	   		                 " It failed with '".$self->{zconf}->{error}."', '"
-			                 .$self->{zconf}->{errorString}."'";
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+	   		                 " It failed with '".$self->{zconf}->error."', '"
+			                 .$self->{zconf}->errorString."'";
+		$self->warn;
 		return $self;
 	}
 
 	#this checks to make sure the set exists, if init is already 1
-	if ($self->{init}) {
+	if ( $self->{init} ) {
 		$self->{init}=$self->{zconf}->defaultSetExists('gui', $self->{set});
 
-		if($self->{zconf}->{error}){
+		if($self->{zconf}->error){
 			$self->{perror}=1;
 			$self->{error}=1;
 			$self->{errorString}="Could not check if the config 'gu'i exists.".
-			                     " It failed with '".$self->{zconf}->{error}."', '"
-								 .$self->{zconf}->{errorString}."'";
-			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                     " It failed with '".$self->{zconf}->error."', '"
+								 .$self->{zconf}->errorString."'";
+			$self->warn;
 			return $self;
 		}
 	}
 
 	#if it is not inited, check to see if it needs to do so
-	if ((!$self->{init}) && $self->{autoinit}) {
+	if ( !$self->{init} ) {
 		$self->init($self->{set});
-		if ($self->{error}) {
-			warn('ZConf-GUI new: Autoinit failed.');
+		if ( $self->error ) {
+			warn('ZConf-GUI new: init failed.');
 		}else {
 			#if init works, it is now inited and thus we set it to one
 			$self->{init}=1;
@@ -124,22 +141,22 @@ sub new {
 
 	#checks wether the specified set exists or not
 	$self->{init}=$self->{zconf}->setExists('gui', $self->{set});
-	if($self->{zconf}->{error}){
+	if( $self->{zconf}->error ){
 		$self->{perror}=1;
 		$self->{error}=1;
 		$self->{errorString}="defaultSetExists failed for 'gui'.".
-	   		                 " It failed with '".$self->{zconf}->{error}."', '"
-			                 .$self->{zconf}->{errorString}."'";
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+	   		                 " It failed with '".$self->{zconf}->error."', '"
+			                 .$self->{zconf}->errorString."'";
+		$self->warn;
 		return $self;
 	}
 
 	#the first one does this if the config has not been done yet
 	#this one does it if the set has not been done yet
 	#if it is not inited, check to see if it needs to do so
-	if (!$self->{init} && $self->{autoinit}) {
+	if (!$self->{init}) {
 		$self->init($self->{set});
-		if ($self->{error}) {
+		if ( $self->error ) {
 			$self->{perror}=1;
 			warn('ZConf-GUI new:4: Autoinit failed.');
 		}else {
@@ -154,6 +171,8 @@ sub new {
 	#reads it if it does not need to be initiated
 	if ($self->{init}) {
 		$self->{zconf}->read({set=>$self->{set}, config=>'gui'});
+	}else{
+		
 	}
 
 	return $self;
@@ -172,23 +191,19 @@ This gets the value for 'appendOthers'.
 
 sub getAppendOthers{
 	my $self=$_[0];
-	my $function='getAppendOthers';
 
-	#blank all previous errors
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	#fetch the preferences for the module
 	my %vars=$self->{zconf}->regexVarGet('gui', '^appendOthers$');
-	if($self->{zconf}->{error}){
+	if( $self->{zconf}->error ){
 		$self->{error}=1;
 		$self->{errorString}='ZConf error getting value "appendOthers" in "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;
 	}
 
@@ -215,19 +230,15 @@ This gets the preferred for a module.
 sub getPreferred{
 	my $self=$_[0];
 	my $module=$_[1];
-	my $function='getPreferred';
 
-	#blank all previous errors
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	if (!defined($module)) {
-		$self->{error}=2;
 		$self->{errorString}='No module specified';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->{error}=2;
+		$self->warn;
 		return undef;
 	}
 
@@ -237,24 +248,24 @@ sub getPreferred{
 
 	#fetch the preferences for the module
 	my %vars=$self->{zconf}->regexVarGet('gui', '^modules/'.quotemeta($module2).'$');
-	if($self->{zconf}->{error}){
+	if($self->{zconf}->error){
 		$self->{error}=1;
 		$self->{errorString}='ZConf error listing sets for the config "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;
 	}
 
 	#if we don't get it, try the default
 	if (!defined($vars{'modules/'.$module2})) {
 		%vars=$self->{zconf}->regexVarGet('gui', '^default$');
-		if($self->{zconf}->{error}){
+		if($self->{zconf}->error){
 			$self->{error}=1;
 			$self->{errorString}='ZConf error listing sets for the config "gui".'.
-			                     ' ZConf error="'.$self->{zconf}->{error}.'" '.
-								 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                     ' ZConf error="'.$self->{zconf}->error.'" '.
+								 'ZConf error string="'.$self->{zconf}->errorString.'"';
+			$self->warn;
 			return undef;
 		}
 
@@ -262,7 +273,7 @@ sub getPreferred{
 		if (!defined($vars{default})) {
 			$self->{error}=5;
 			$self->{errorString}='No preferences for "'.$module.'" and there is no default';
-			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			$self->warn;
 			return undef;
 		}
 
@@ -285,22 +296,18 @@ This gets what the current set is.
 
 sub getSet{
 	my $self=$_[0];
-	my $function='getSet';
 
-	#blanks any previous errors
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	my $set=$self->{zconf}->getSet('gui');
-	if($self->{zconf}->{error}){
+	if($self->{zconf}->error){
 		$self->{error}=1;
 		$self->{errorString}='ZConf error getting the loaded set the config "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;
 	}
 
@@ -321,18 +328,15 @@ This fetches if X should be used or not for a module.
 sub getUseX{
 	my $self=$_[0];
 	my $module=$_[1];
-	my $function='getUseX';
 
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	if (!defined($module)) {
 		$self->{error}=2;
 		$self->{errorString}='No module specified';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
@@ -342,12 +346,12 @@ sub getUseX{
 
 	#fetch the preferences for the module
 	my %vars=$self->{zconf}->regexVarGet('gui', '^useX/'.quotemeta($module2).'$');
-	if($self->{zconf}->{error}){
+	if($self->{zconf}->error){
 		$self->{error}=1;
 		$self->{errorString}='ZConf error listing sets for the config "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;
 	}
 
@@ -371,29 +375,25 @@ returned value is a perl bolean value.
 sub hasPreferred{
 	my $self=$_[0];
 	my $module=$_[1];
-	my $function='hasPreferred';
 
-	#blank all previous errors
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	if (!defined($module)) {
 		$self->{error}=2;
 		$self->{errorString}='No module specified';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
 	my %vars=$self->{zconf}->regexVarGet('gui', '^modules/'.quotemeta($module).'$');
-	if($self->{zconf}->{error}){
+	if( $self->{zconf}->error ){
 		$self->{error}=1;
 		$self->{errorString}='ZConf error listing sets for the config "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;
 	}
 
@@ -430,22 +430,18 @@ it is not defined, ZConf will use the default one.
 sub init{
 	my $self=$_[0];
 	my $set=$_[1];
-	my $function='init';
 
-	#blanks any previous errors
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	my $returned = $self->{zconf}->configExists("gui");
-	if(defined($self->{zconf}->{error})){
+	if($self->{zconf}->error){
 		$self->{error}=1;
 		$self->{errorString}="Could not check if the config 'gui' exists.".
-		                     " It failed with '".$self->{zconf}->{error}."', '"
-			                 .$self->{zconf}->{errorString}."'";
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		                     " It failed with '".$self->{zconf}->error."', '"
+			                 .$self->{zconf}->errorString."'";
+		$self->warn;
 		return undef;
 	}
 
@@ -455,9 +451,9 @@ sub init{
 		if ($self->{zconf}->{error}) {
 			$self->{error}=1;
 			$self->{errorString}="Could not create the ZConf config 'gui'.".
-			                 " It failed with '".$self->{zconf}->{error}."', '"
-			                 .$self->{zconf}->{errorString}."'";
-			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 " It failed with '".$self->{zconf}->error."', '"
+			                 .$self->{zconf}->errorString."'";
+			$self->warn;
 			return undef;
 		}
 	}
@@ -471,23 +467,23 @@ sub init{
 									 );
 	
 	#error if the write failed
-	if ($self->{zconf}->{error}) {
+	if ( $self->{zconf}->error ) {
 		$self->{error}=1;
 		$self->{errorString}="writeSetFromHash failed.".
-			                 " It failed with '".$self->{zconf}->{error}."', '"
-			                 .$self->{zconf}->{errorString}."'";
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 " It failed with '".$self->{zconf}->error."', '"
+			                 .$self->{zconf}->errorString."'";
+		$self->warn;
 		return undef;
 	}
 
 	#now that it is initiated, load it
 	$self->{zconf}->read({config=>'gui', set=>$set});
-	if ($self->{zconf}->{error}) {
+	if ( $self->{zconf}->error ) {
 		$self->{error}=1;
 		$self->{errorString}="read failed.".
-			                 " It failed with '".$self->{zconf}->{error}."', '"
-			                 .$self->{zconf}->{errorString}."'";
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 " It failed with '".$self->{zconf}->error."', '"
+			                 .$self->{zconf}->errorString."'";
+		$self->warn;
 		return undef;
 	}
 
@@ -505,18 +501,15 @@ This is the available GUI modules for a module.
 sub listAvailable{
 	my $self=$_[0];
 	my $module=$_[1];
-	my $function='listAvailable';
 
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	if (!defined($module)) {
 		$self->{error}=2;
 		$self->{errorString}='No module specified';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
@@ -525,10 +518,10 @@ sub listAvailable{
 
 	my $modules=list_modules($check,{ list_modules => 1});
 	#testing shows this should not happen, but in case it does, handle it
-	if (!defined($modules)) {
+	if ( ! defined($modules) ) {
 		$self->{error}=6;
 		$self->{errorString}='list_modules failed';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
@@ -556,22 +549,18 @@ This lists configured modules.
 
 sub listModules{
 	my $self=$_[0];
-	my $function='listModules';
 
-	#blank all previous errors
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	my @modules=$self->{zconf}->regexVarSearch('gui', '^modules');
-	if ($self->{zconf}->{error}) {
+	if ( $self->{zconf}->error ) {
 		$self->{error}=1;
 		$self->{errorString}="regexVarSearch failed.".
-			                 " It failed with '".$self->{zconf}->{error}."', '"
-			                 .$self->{zconf}->{errorString}."'";
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 " It failed with '".$self->{zconf}->error."', '"
+			                 .$self->{zconf}->errorString."'";
+		$self->warn;
 		return undef;
 	}	
 
@@ -601,22 +590,18 @@ This lists the available sets.
 
 sub listSets{
 	my $self=$_[0];
-	my $function='listSets';
 
-	#blanks any previous errors
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	my @sets=$self->{zconf}->getAvailableSets('gui');
-	if($self->{zconf}->{error}){
+	if($self->{zconf}->error){
 		$self->{error}=1;
 		$self->{errorString}='ZConf error listing sets for the config "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;
 	}
 
@@ -645,22 +630,18 @@ is undef, the default set is read.
 sub readSet{
 	my $self=$_[0];
 	my $set=$_[1];
-	my $function='readSet';
 
-	#blanks any previous errors
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	$self->{zconf}->read({config=>'gui', set=>$set});
-	if ($self->{zconf}->{error}) {
+	if ( $self->{zconf}->error ) {
 		$self->{error}=1;
 		$self->{errorString}='ZConf error reading the config "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;
 	}
 
@@ -681,19 +662,15 @@ This removes a the preferences for a module.
 sub rmPreferred{
 	my $self=$_[0];
 	my $module=$_[1];
-	my $function='rmPreferred';
 
-	#blank all previous errors
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	if (!defined($module)) {
 		$self->{errorString}='No module specified';
 		$self->{error}=2;
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
@@ -701,20 +678,20 @@ sub rmPreferred{
 	my $safemodule=quotemeta($module);
 
 	my @deleted=$self->{zconf}->regexVarDel('gui', '^modules/'.$safemodule.'$');
-	if ($self->{zconf}->{error}) {
+	if ( $self->{zconf}->error ) {
 		$self->{error}=1;
 		$self->{errorString}='ZConf error reading the config "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;	
 	}
 
 	#only one will be matched so we just need to check the first
-	if ($deleted[0] ne 'modules/'.$module) {
+	if ( $deleted[0] ne 'modules/'.$module ) {
 		$self->{errorString}='"'.$module.' not matched"';
 		$self->{error}=7;
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
@@ -738,11 +715,8 @@ value.
 sub setAppendOthers{
 	my $self=$_[0];
 	my $boolean=$_[1];
-	my $function='setAppendOthers';
 
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
@@ -750,7 +724,7 @@ sub setAppendOthers{
 	if (!defined($boolean)) {
 		$self->{error}=8;
 		$self->{errorString}='No value specified to set "appendOthers" to';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
@@ -758,29 +732,29 @@ sub setAppendOthers{
 	if ($boolean !~ /^[01]$/) {
 		$self->{error}=9;
 		$self->{errorString}='The value "'.$boolean.'" does not match /^[01]$/';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
 	#set the value
 	$self->{zconf}->setVar('gui', 'appendOther');
-	if($self->{zconf}->{error}){
+	if($self->{zconf}->error){
 		$self->{error}=1;
 		$self->{errorString}='ZConf error setting "appendOthers" for "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;
 	}
 
 	#update it
 	$self->{zconf}->writeSetFromLoadedConfig({config=>'gui'});
-	if($self->{zconf}->{error}){
+	if($self->{zconf}->error){
 		$self->{error}=1;
 		$self->{errorString}='ZConf error saving config "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;
 	}
 
@@ -805,26 +779,22 @@ sub setPreferred{
 	if (defined($_[2])) {
 		$prefs=$_[2];
 	}
-	my $function='setPreferred';
 
-	#blank all previous errors
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	if (!defined($module)) {
 		$self->{error}=2;
 		$self->{errorString}='No module specified';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
 	if (!defined(@{$prefs}[0])) {
 		$self->{error}=3;
 		$self->{errorString}='No prefs specified';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
@@ -833,7 +803,7 @@ sub setPreferred{
 		if (@{$prefs}[$int] =~ /:/) {
 			$self->{error}=4;
 			$self->{errorString}='"'.@{$prefs}[$int].'" matched /:/';
-			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			$self->warn;
 			return undef;
 		}
 
@@ -845,22 +815,22 @@ sub setPreferred{
 	my $joinedprefs=join(':', @{$prefs});
 
 	$self->{zconf}->setVar('gui', 'modules/'.$module, $joinedprefs);
-	if($self->{zconf}->{error}){
+	if($self->{zconf}->error){
 		$self->{error}=1;
 		$self->{errorString}='ZConf error listing sets for the config "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;
 	}
 
 	$self->{zconf}->writeSetFromLoadedConfig({config=>'gui'});
-	if($self->{zconf}->{error}){
+	if($self->{zconf}->error){
 		$self->{error}=1;
 		$self->{errorString}='ZConf error saving config "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;
 	}
 
@@ -883,25 +853,22 @@ sub setUseX{
 	my $self=$_[0];
 	my $module=$_[1];
 	my $useX=$_[2];
-	my $function='setUseX';
 
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	if (!defined($module)) {
 		$self->{error}=2;
 		$self->{errorString}='No module specified';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
 	if (!defined($useX)) {
 		$self->{error}=3;
 		$self->{errorString}='No prefs specified';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
@@ -911,9 +878,9 @@ sub setUseX{
 	if($self->{zconf}->{error}){
 		$self->{error}=1;
 		$self->{errorString}='ZConf error listing sets for the config "gui".'.
-			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			                 ' ZConf error="'.$self->{zconf}->error.'" '.
+			                 'ZConf error string="'.$self->{zconf}->errorString.'"';
+		$self->warn;
 		return undef;
 	}
 
@@ -938,11 +905,8 @@ likely not ran from with a terminal.
 
 sub termAvailable{
 	my $self=$_[0];
-	my $function='termAvailable';
 
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
@@ -972,11 +936,8 @@ a boolean value.
 
 sub Xavailable{
 	my $self=$_[0];
-	my $function='Xavailable';
 
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
@@ -1012,18 +973,15 @@ value.
 sub useX{
 	my $self=$_[0];
 	my $module=$_[1];
-	my $function='useX';
 
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	if (!defined($module)) {
 		$self->{error}=2;
 		$self->{errorString}='No module specified';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
@@ -1055,19 +1013,15 @@ backends in order of preference.
 sub which{
 	my $self=$_[0];
 	my $module=$_[1];
-	my $function='which';
 
-	#blank all previous errors
-	$self->errorblank;
-	if ($self->{error}) {
-		warn($self->{module}.' '.$function.': A permanent error is set');
+	if ( ! $self->errorblank ){
 		return undef;
 	}
 
 	if (!defined($module)) {
 		$self->{error}=2;
 		$self->{errorString}='No module specified';
-		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		$self->warn;
 		return undef;
 	}
 
@@ -1118,8 +1072,8 @@ sub which{
 
 	#determine if we should append others or not
 	my $ao=$self->getAppendOthers;
-	if ($self->{error}) {
-		warn('ZConf-GUI which: getAppendOthers errored');
+	if ($self->error) {
+		$self->warnString('getAppendOthers errored');
 		return undef;
 	}
 
@@ -1153,66 +1107,43 @@ sub which{
 	return @usable;
 }
 
-=head2 errorblank
+=head2 ERROR CODES/FLAGS HANDLING
 
-This blanks the error storage and is only meant for internal usage.
+This module L<Error::Helper> for error handling.
 
-It does the following.
+=head3 1, zconf
 
-    $self->{error}=undef;
-    $self->{errorString}="";
+ZConf error. Check $self->{zconf}->error.
 
-=cut
-
-#blanks the error flags
-sub errorblank{
-	my $self=$_[0];
-
-    if ($self->{perror}) {
-		return undef;
-	}
-
-	$self->{error}=undef;
-	$self->{errorString}="";
-
-	return 1;
-}
-
-=head2 ERROR CODES
-
-=head3 1
-
-ZConf error. Check $self->{zconf}->{error}.
-
-=head3 2
+=head3 2, missingArg
 
 No module specified.
 
-=head3 3
+=head3 3, missingArg
 
 No preferences specified.
 
-=head3 4
+=head3 4, colon
 
 A preference matched /:/.
 
-=head3 5
+=head3 5, noPrefs
 
 No preferences for the listed module.
 
-=head3 6
+=head3 6, lmFailed
 
 'list_modules' failed.
 
-=head3 7
+=head3 7, modDNE
 
 The specified module does not exist.
 
-=head3 8
+=head3 8, missingArg
 
 No value for what to set appendOthers to specified.
 
-=head3 9
+=head3 9, notBoolean
 
 The value specified for appendOthers is not boolean.
 
